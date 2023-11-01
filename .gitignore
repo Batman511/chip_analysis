@@ -1,0 +1,6 @@
+data/box_xrays
+**/__pycache__
+Temp_images
+data/info_file.json
+test.ipynb
+validate_cutting.ipynb
