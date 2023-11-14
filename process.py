@@ -40,6 +40,7 @@ def get_window(
     padding_inp: Dict[str,int] = None,
     padding_out: Dict[str,int] = None,
     dbscan_kwargs: Dict = None,
+    max_points: int = 10000,
     ) -> dict:
     """
     Cropping the image on the chip.
@@ -88,28 +89,17 @@ def get_window(
         canny_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
     X = np.concatenate(contours).reshape([-1, 2])
+    if X.shape[0] > max_points:
+        X = X[np.random.choice(X.shape[0], max_points, replace=False)]
     clustering = DBSCAN(**dbscan_kwargs).fit(X)
     counter = Counter(clustering.labels_)
     class_id = counter.most_common()[0][0]
     merged_contours = np.concatenate(contours)[:, 0, :]
-    filtered_contours = merged_contours[clustering.labels_ == class_id]
-    temp_contours = [set([(x[0], x[1]) for x in cnt[:, 0, :]])
-                     for cnt in contours]
-    mask = [False for x in range(len(contours))]
-    for point in filtered_contours:
-        for i2, cnt in enumerate(temp_contours):
-            if tuple(point) in cnt:
-                mask[i2] = True
-    filtered_contours = [cnt for i, cnt in enumerate(contours) if mask[i]]
+    filtered_contours = X[clustering.labels_ == class_id]
     new_contours = filtered_contours
 
-    # for cnt in filtered_contours:
-    #     rect = cv2.minAreaRect(cnt)
-    #     square = int(rect[1][0]*rect[1][1])
-    #     if square < img.shape[0] * img.shape[1] * 0.8:
-    #         new_contours.append(cnt)
 
-    combined_contour = np.concatenate(new_contours[:]) + np.array([padding_inp['y'], padding_inp['x']])
+    combined_contour = filtered_contours + np.array([padding_inp['y'], padding_inp['x']])
     rect = cv2.minAreaRect(combined_contour)
 
     rect = (rect[0], (rect[1][0] + padding_out['y'],
@@ -177,7 +167,7 @@ def update_image_by_etalon(img_etalon: np.ndarray, img: np.ndarray) -> dict:
         
         img_box = img.copy()
         # print(dst)
-        img_box = cv2.polylines(img_box,[np.int32(dst)],True,255,3, cv2.LINE_AA)
+        img_box = cv2.polylines(img_box,[np.int32(dst)],True,(0,0,255),3, cv2.LINE_AA,)
         invM = cv2.getPerspectiveTransform(dst, pts)
         img_cuted = cv2.warpPerspective(img, invM, (w, h))
         img_cuted = cv2.resize(img_cuted, (w, h))
@@ -210,9 +200,9 @@ def find_differences1(img1: np.ndarray, img2: np.ndarray) -> dict:
 
     Returns:
         dict: dict with results
-        - 'absdiff': The absolute pixel-wise difference between img1 and a resized version of img2.
-        - 'diff_erode': The eroded version of the absolute difference image to remove small noise.
-        - 'diff_dilate': The dilated version of the absolute difference image to emphasize differences.
+        - 'img_diff': The absolute pixel-wise difference between img1 and a resized version of img2.
+        - 'img_diff_erode': The eroded version of the absolute difference image to remove small noise.
+        - 'img_diff_dilate': The dilated version of the absolute difference image to emphasize differences.
     """
     temp_img2 = img2.copy()
     temp_img2 = cv2.resize(temp_img2, img1.shape[::-1])
@@ -241,7 +231,8 @@ def find_differences2(img1: np.ndarray, img2: np.ndarray):
         dict: dict with results
         - "img_diff" (numpy.ndarray): An image representing the visual differences between img1 and img2.
         - "img_thresh" (numpy.ndarray): A binary thresholded image highlighting the differences.
-        - "img_erode" (numpy.ndarray): A further processed version of the thresholded image using erosion.
+        - "img_diff_erode": The eroded version of the absolute difference image to remove small noise.
+        - "img_diff_dilate": The dilated version of the absolute difference image to emphasize differences.
         - "score" (float): The SSIM score representing the structural similarity between img1 and img2.
     """
     (score, diff) = compare_ssim(img1, img2, full=True)
