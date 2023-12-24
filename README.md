@@ -11,7 +11,7 @@ This project is a tool for detecting anomalies on chips. Anomalies may include m
 
 ## Example predictions
 
-<img src="https://github.com/Fruha/ASE_CHIPS/blob/master/git_images/example.png" width="60%">
+<img src="https://github.com/Fruha/ASE_CHIPS/blob/master/git_images/example.png" width="100%">
 
 ## Installation
 ### WINDOWS
