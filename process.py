@@ -1,7 +1,5 @@
 import cv2
 import numpy as np
-from matplotlib import pyplot as plt
-import os
 from sklearn.cluster import DBSCAN
 from collections import Counter
 from scipy.spatial import distance as dist
@@ -19,8 +17,8 @@ def order_points(pts: np.ndarray) -> np.ndarray:
         np.ndarray: ordered coords.
 
     Example:
-    >>> order_points(np.array([[0,0],[0,1],[1,1],[1,0]]))
-    >>> array([[0., 0.],[1., 0.],[1., 1.],[0., 1.]], dtype=float32)
+    order_points(np.array([[0,0],[0,1],[1,1],[1,0]]))
+    array([[0., 0.],[1., 0.],[1., 1.],[0., 1.]], dtype=float32)
     """
     xSorted = pts[np.argsort(pts[:, 0]), :]
     leftMost = xSorted[:2, :]
@@ -62,8 +60,8 @@ def get_window(
         - img_canny (np.ndarray): Image after applying the Canny algorithm for edge detection.
         - img_box (np.ndarray): Image with drawn rectangles.
         - img_cutted (np.ndarray): Cropped image.
-        - points (np.ndarray): Coordinates of the vertices of the detected object object.
-        
+        - points (np.ndarray): Coordinates of the vertices of the detected object.
+
     """
     if padding_inp is None:
         padding_inp = {
@@ -82,11 +80,8 @@ def get_window(
         }
 
     img_cutted_in = img[padding_inp['x']:-padding_inp['x'],padding_inp['y']:-padding_inp['y']]
-    # img_denoised = cv2.fastNlMeansDenoising(img_cutted_in,None,40,7,21)
-    # img = cv2.fastNlMeansDenoisingColored(img,None,10,10,7,21)
     canny_img = cv2.Canny(img_cutted_in, threshold_min, threshold_max)
-    contours, hierarchy = cv2.findContours(
-        canny_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    contours, hierarchy = cv2.findContours(canny_img, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
 
     X = np.concatenate(contours).reshape([-1, 2])
     if X.shape[0] > max_points:
@@ -118,6 +113,7 @@ def get_window(
     img_cutted = cv2.warpPerspective(img, matrix, (w, h))
     img_cutted = cv2.resize(img_cutted, ((
         int(np.linalg.norm(box[0]-box[1]))), int(np.linalg.norm(box[1]-box[2]))))
+
     return {
         'img_canny': canny_img,
         'img_box': img_box,
@@ -126,9 +122,9 @@ def get_window(
     }
 
 @cached
-def update_image_by_etalon(img_etalon: np.ndarray, img: np.ndarray) -> dict:
+def update_image_by_etalon(img_etalon: np.ndarray, img: np.ndarray, flag_des='flann', flag_det='sift') -> dict:
     """
-    Tries to superimpose one image onto another using an SIFT.
+    Tries to superimpose one image onto another using SIFT.
 
     Args:
         img_etalon (np.ndarray): source etalon image.
@@ -141,20 +137,45 @@ def update_image_by_etalon(img_etalon: np.ndarray, img: np.ndarray) -> dict:
         - img_cutted (np.ndarray): Image with region of interest.
     """
     MIN_MATCH_COUNT = 5
-    
-    sift = cv2.SIFT_create()
-    kp1, des1 = sift.detectAndCompute(img_etalon,None)
-    kp2, des2 = sift.detectAndCompute(img,None)
-    FLANN_INDEX_KDTREE = 1
-    index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
-    search_params = dict(checks = 50)
-    flann = cv2.FlannBasedMatcher(index_params, search_params)
-    matches = flann.knnMatch(des1,des2,k=2)
-    # store all the good matches as per Lowe's ratio test.
+
+    # Нахождение ключевых точек и их дескрипторов для обоих изображений
+    if flag_det=='sift':
+          sift = cv2.SIFT_create()
+          kp1, des1 = sift.detectAndCompute(img_etalon,None)
+          kp2, des2 = sift.detectAndCompute(img,None)
+
+    if flag_det=='brisk':
+        brisk = cv2.BRISK_create()
+        kp1, des1 = brisk.detectAndCompute(img_etalon,None)
+        kp2, des2 = brisk.detectAndCompute(img,None)
+
+
+
+
+    # Инициализация и сопоставление дескрипторов
+    if flag_des=='flann':
+        FLANN_INDEX_KDTREE = 1
+        index_params = dict(algorithm = FLANN_INDEX_KDTREE, trees = 5)
+        search_params = dict(checks = 50)
+        flann = cv2.FlannBasedMatcher(index_params, search_params)
+        matches = flann.knnMatch(des1,des2,k=2)
+
+    elif flag_des=='bf':
+        bf = cv2.BFMatcher()
+        matches = bf.knnMatch(des1,des2,k=2)
+
+    elif flag_des=='bf_norm_L2':
+        bf = cv2.BFMatcher_create(normType=cv2.NORM_L2, crossCheck=False)
+        matches = bf.knnMatch(des1,des2,k=2)
+
+
+
+    # Применение фильтра для удаления неправильных сопоставлений
     good = []
     for m,n in matches:
         if m.distance < 0.7*n.distance:
             good.append(m)
+
 
     if len(good)>MIN_MATCH_COUNT:
         src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
@@ -164,9 +185,8 @@ def update_image_by_etalon(img_etalon: np.ndarray, img: np.ndarray) -> dict:
         h,w = img_etalon.shape
         pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
         dst = cv2.perspectiveTransform(pts,M)
-        
+
         img_box = img.copy()
-        # print(dst)
         img_box = cv2.polylines(img_box,[np.int32(dst)],True,(0,0,255),3, cv2.LINE_AA,)
         invM = cv2.getPerspectiveTransform(dst, pts)
         img_cuted = cv2.warpPerspective(img, invM, (w, h))
@@ -176,12 +196,14 @@ def update_image_by_etalon(img_etalon: np.ndarray, img: np.ndarray) -> dict:
         matchesMask = None
         raise Exception('NotEnoughPoints')
 
+
+    # Рисование сопоставлений на изображениях
     draw_params = dict(matchColor = (0,255,0), # draw matches in green color
         singlePointColor = None,
         matchesMask = matchesMask, # draw only inliers
         flags = 2)
-    
     img_matches = cv2.drawMatches(img_etalon,kp1,img_box,kp2,good,None,**draw_params)
+
     return {
         'img_box': img_box,
         'img_matches': img_matches,
@@ -207,18 +229,23 @@ def find_differences1(img1: np.ndarray, img2: np.ndarray) -> dict:
     temp_img2 = img2.copy()
     temp_img2 = cv2.resize(temp_img2, img1.shape[::-1])
     diff = cv2.absdiff(img1, temp_img2)
-    kernel = np.ones((4, 4), np.uint8) 
-    diff_erode = cv2.erode(diff, kernel, iterations=2) 
-    diff_dilate = cv2.dilate(diff, kernel, iterations=2) 
+
+    # Вычисление корреляции
+    correlation = cv2.matchTemplate(img1, temp_img2, cv2.TM_CCOEFF_NORMED)[0][0]
+
+    kernel = np.ones((3, 3), np.uint8)
+    diff_erode = cv2.erode(diff, kernel, iterations=2)
+    diff_dilate = cv2.dilate(diff, kernel, iterations=2)
 
     return {
         'img_diff': diff,
         'img_diff_erode': diff_erode,
         'img_diff_dilate': diff_dilate,
+        'correlation': correlation
     }
 
 @cached
-def find_differences2(img1: np.ndarray, img2: np.ndarray):
+def find_differences2(img1: np.ndarray, img2: np.ndarray, TRESH=True):
     """
     Compare two input images and identify the differences between them using Structural
     Similarity Index (SSIM) and image thresholding.
@@ -229,7 +256,7 @@ def find_differences2(img1: np.ndarray, img2: np.ndarray):
 
     Returns:
         dict: dict with results
-        - "img_diff" (numpy.ndarray): An image representing the visual differences between img1 and img2.
+        - "img_ssim" (numpy.ndarray): An image representing the visual differences between img1 and img2.
         - "img_thresh" (numpy.ndarray): A binary thresholded image highlighting the differences.
         - "img_diff_erode": The eroded version of the absolute difference image to remove small noise.
         - "img_diff_dilate": The dilated version of the absolute difference image to emphasize differences.
@@ -237,13 +264,16 @@ def find_differences2(img1: np.ndarray, img2: np.ndarray):
     """
     (score, diff) = compare_ssim(img1, img2, full=True)
     diff = (diff * 255).astype("uint8")
-    thresh = cv2.threshold(diff, 0, 255,cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-    
-    kernel = np.ones((4, 4), np.uint8) 
-    diff_erode = cv2.erode(thresh, kernel, iterations=1) 
-    diff_dilate = cv2.dilate(thresh, kernel, iterations=1) 
+    if TRESH:
+        thresh = cv2.threshold(diff, 0, 255,cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+    else:
+        tresh = diff
+
+    kernel = np.ones((3, 3), np.uint8)
+    diff_erode = cv2.erode(thresh, kernel, iterations=1)
+    diff_dilate = cv2.dilate(thresh, kernel, iterations=1)
     return {
-        "img_diff": diff,
+        "img_ssim": diff,
         "img_thresh": thresh,
         "img_diff_erode": diff_erode,
         "img_diff_dilate": diff_dilate,
