@@ -117,114 +117,114 @@ def validate(
 
 
 
-# # Эталон, выделение объекта
-#     fig.add_subplot(rows, columns, 1)
-#     plt.imshow(etalon_img, 'gray')
-#     plt.title('Etalon')
-#
-#     fig.add_subplot(rows, columns, 2)
-#     plt.imshow(etalon_cut_data['img_canny'], 'gray')
-#     plt.title('Etalon Canny image')
-#
-#     fig.add_subplot(rows, columns, 3)
-#     plt.imshow(etalon_cut_data['img_box'], 'gray')
-#     plt.title('Etalon with box')
-#
-#     fig.add_subplot(rows, columns, 4)
-#     plt.imshow(etalon_cut_data['img_cutted'], 'gray')
-#     plt.title('Etalon cutted')
+# Эталон, выделение объекта
+    fig.add_subplot(rows, columns, 1)
+    plt.imshow(etalon_img, 'gray')
+    plt.title('Etalon')
+
+    fig.add_subplot(rows, columns, 2)
+    plt.imshow(etalon_cut_data['img_canny'], 'gray')
+    plt.title('Etalon Canny image')
+
+    fig.add_subplot(rows, columns, 3)
+    plt.imshow(etalon_cut_data['img_box'], 'gray')
+    plt.title('Etalon with box')
+
+    fig.add_subplot(rows, columns, 4)
+    plt.imshow(etalon_cut_data['img_cutted'], 'gray')
+    plt.title('Etalon cutted')
 
 
-# # Проверяемое изображение
-#     fig.add_subplot(rows, columns, 5)
-#     plt.imshow(test_img, 'gray')
-#     plt.title('Validation image')
-#
-#     fig.add_subplot(rows, columns, 6)
-#     plt.imshow(test_cut_data['img_canny'], 'gray')
-#     plt.title('Validation image with box')
-#
-#     fig.add_subplot(rows, columns, 7)
-#     plt.imshow(test_cut_data['img_box'], 'gray')
-#     plt.title('Validation image with box')
-#
-#     fig.add_subplot(rows, columns, 8)
-#     plt.imshow(test_cut_data['img_cutted'], 'gray')
-#     plt.title('Validation Image cutted')
+# Проверяемое изображение
+    fig.add_subplot(rows, columns, 5)
+    plt.imshow(test_img, 'gray')
+    plt.title('Validation image')
+
+    fig.add_subplot(rows, columns, 6)
+    plt.imshow(test_cut_data['img_canny'], 'gray')
+    plt.title('Validation image with box')
+
+    fig.add_subplot(rows, columns, 7)
+    plt.imshow(test_cut_data['img_box'], 'gray')
+    plt.title('Validation image with box')
+
+    fig.add_subplot(rows, columns, 8)
+    plt.imshow(test_cut_data['img_cutted'], 'gray')
+    plt.title('Validation Image cutted')
 
 
-# # differences1_data -- абсолютная разница между исходными изображениями
-#     fig.add_subplot(rows, columns, 9)
-#     plt.imshow(differences1_data['img_diff'])
-#     plt.title('Images differences ABS')
-#     plt.colorbar()
-#
-#     fig.add_subplot(rows, columns, 10)
-#     plt.imshow(differences1_data['img_diff_erode'])
-#     plt.title('Erode ABS')
-#     plt.colorbar()
-#
-#     fig.add_subplot(rows, columns, 11)
-#     plt.imshow(differences1_data['img_diff_dilate'])
-#     plt.title('Dilate ABS')
-#     plt.colorbar()
+# differences1_data -- абсолютная разница между исходными изображениями
+    fig.add_subplot(rows, columns, 9)
+    plt.imshow(differences1_data['img_diff'])
+    plt.title('Images differences ABS')
+    plt.colorbar()
+
+    fig.add_subplot(rows, columns, 10)
+    plt.imshow(differences1_data['img_diff_erode'])
+    plt.title('Erode ABS')
+    plt.colorbar()
+
+    fig.add_subplot(rows, columns, 11)
+    plt.imshow(differences1_data['img_diff_dilate'])
+    plt.title('Dilate ABS')
+    plt.colorbar()
 
 
 # differences1_superimpose_data -- абсолютная разница между изображениями с помощью SIFT
-#     fig.add_subplot(rows, columns, 13)
-#     plt.imshow(differences1_superimpose_data['img_diff'])
-#     plt.title('Images differences ABS with SIFT')
-#     plt.colorbar()
-#
-#     fig.add_subplot(rows, columns, 14)
-#     plt.imshow(differences1_superimpose_data['img_diff_erode'])
-#     plt.title('Erode with SIFT')
-#     plt.colorbar()
-#
-#     fig.add_subplot(rows, columns, 15)
-#     plt.imshow(differences1_superimpose_data['img_diff_dilate'])
-#     plt.title('Dilate with SIFT')
-#     plt.colorbar()
+    fig.add_subplot(rows, columns, 13)
+    plt.imshow(differences1_superimpose_data['img_diff'])
+    plt.title('Images differences ABS with SIFT')
+    plt.colorbar()
+
+    fig.add_subplot(rows, columns, 14)
+    plt.imshow(differences1_superimpose_data['img_diff_erode'])
+    plt.title('Erode with SIFT')
+    plt.colorbar()
+
+    fig.add_subplot(rows, columns, 15)
+    plt.imshow(differences1_superimpose_data['img_diff_dilate'])
+    plt.title('Dilate with SIFT')
+    plt.colorbar()
 
 
 
-# # differences2_data -- абсолютная разница между изображениями с применением БИНАРИЗАЦИИ и SSIM
-#     fig.add_subplot(rows, columns, 17)
-#     plt.imshow(255 - differences2_data['img_ssim'])
-#     plt.title('Images differences SSIM')
-#     plt.colorbar()
-#
-#     fig.add_subplot(rows, columns, 18)
-#     plt.imshow(differences2_data['img_diff_erode'])
-#     plt.title('Erode SSIM')
-#     plt.colorbar()
-#
-#     fig.add_subplot(rows, columns, 19)
-#     plt.imshow(differences2_data['img_diff_dilate'])
-#     plt.title('Dilate SSIM')
-#     plt.colorbar()
-#
-#     fig.add_subplot(rows, columns, 20)
-#     plt.imshow(differences2_data['img_thresh'])
-#     plt.title('Thresh')
-#     plt.colorbar()
+# differences2_data -- абсолютная разница между изображениями с применением БИНАРИЗАЦИИ и SSIM
+    fig.add_subplot(rows, columns, 17)
+    plt.imshow(255 - differences2_data['img_ssim'])
+    plt.title('Images differences SSIM')
+    plt.colorbar()
+
+    fig.add_subplot(rows, columns, 18)
+    plt.imshow(differences2_data['img_diff_erode'])
+    plt.title('Erode SSIM')
+    plt.colorbar()
+
+    fig.add_subplot(rows, columns, 19)
+    plt.imshow(differences2_data['img_diff_dilate'])
+    plt.title('Dilate SSIM')
+    plt.colorbar()
+
+    fig.add_subplot(rows, columns, 20)
+    plt.imshow(differences2_data['img_thresh'])
+    plt.title('Thresh')
+    plt.colorbar()
 
 
-# # differences2_superimpose_data -- абсолютная разница между изображениями с помощью SIFT с применением БИНАРИЗАЦИИ и SSIM
-#     fig.add_subplot(rows, columns, 21)
-#     plt.imshow(255 - differences2_superimpose_data['img_ssim'])
-#     plt.title('Images differences SSIM with SIFT')
-#     plt.colorbar()
-#
-#     fig.add_subplot(rows, columns, 22)
-#     plt.imshow(differences2_superimpose_data['img_diff_erode'])
-#     plt.title('Erode SSIM with SIFT')
-#     plt.colorbar()
-#
-#     fig.add_subplot(rows, columns, 23)
-#     plt.imshow(differences2_superimpose_data['img_diff_dilate'])
-#     plt.title('Dilate SSIM with SIFT')
-#     plt.colorbar()
+# differences2_superimpose_data -- абсолютная разница между изображениями с помощью SIFT с применением БИНАРИЗАЦИИ и SSIM
+    fig.add_subplot(rows, columns, 21)
+    plt.imshow(255 - differences2_superimpose_data['img_ssim'])
+    plt.title('Images differences SSIM with SIFT')
+    plt.colorbar()
+
+    fig.add_subplot(rows, columns, 22)
+    plt.imshow(differences2_superimpose_data['img_diff_erode'])
+    plt.title('Erode SSIM with SIFT')
+    plt.colorbar()
+
+    fig.add_subplot(rows, columns, 23)
+    plt.imshow(differences2_superimpose_data['img_diff_dilate'])
+    plt.title('Dilate SSIM with SIFT')
+    plt.colorbar()
 
 
 
