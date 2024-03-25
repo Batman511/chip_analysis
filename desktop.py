@@ -212,23 +212,28 @@ class ImageComparisonApp(QWidget):
         differences1_superimpose_data = find_differences1(label_data, superimpose_data['img_cutted'])
 
 
-        # Преобразуем изображение cv в QPixmap
+        # Преобразуем изображения cv в QPixmap
+        test = self.convertCvImageToPixmap(label_data, 200, 200)
         ABS_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff'], 200, 200)
-        Erode_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff_erode'], 200, 200)
+        # Erode_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff_erode'], 200, 200)
         Dilate_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff_dilate'], 200, 200)
 
+        titles = ["Test Image:", "ABS with SIFT:", "Dilate with SIFT:"]
 
         # Создаем три виджета QLabel для отображения изображений
-        for image_cv in [ABS_with_SIFT,Erode_with_SIFT,Dilate_with_SIFT]:
+        for image_cv, title in zip([test, ABS_with_SIFT,Dilate_with_SIFT], titles):
+            # Создаем QLabel для заголовка
+            title_label = QLabel(title)
+            self.images_layout.addWidget(title_label)
+
+            # Создаем QLabel для отображения изображения
             label = QLabel()
             label.setPixmap(image_cv)
             self.images_layout.addWidget(label)
 
 
         self.images_layout.parentWidget().show()
-
-        # Устанавливаем флаг, указывающий на то, что изображения загружены
-        self.images_loaded = True
+        self.images_loaded = True  # изображения загружены
 
     def changePosition(self):
         # Изменение положения рамки вокруг эталонной картинки
