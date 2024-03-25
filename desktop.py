@@ -5,6 +5,8 @@ from PyQt5.QtGui import QPixmap, QImage, QFont, qRgb
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGroupBox, QPushButton, QVBoxLayout, QFileDialog, \
     QScrollArea, QHBoxLayout, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QCheckBox
 from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QUrl
+from PyQt5.QtGui import QDesktopServices
 
 from process import *
 
@@ -35,10 +37,38 @@ class ImageComparisonApp(QWidget):
         font = QFont()
         font.setPointSize(12)
 
+        h_layout = QHBoxLayout()
+
 
         self.folder_label = QLabel("Выберите папку с изображениями:")
         self.folder_label.setFont(font)
-        layout.addWidget(self.folder_label)
+        h_layout.addWidget(self.folder_label)
+
+
+        self.results_button = QPushButton("Результаты сеансов")
+        self.results_button.setFont(font)
+        self.results_button.setStyleSheet(
+            "QPushButton {"
+            "background-color: #66c266;"  # Зеленый цвет кнопки
+            "border: 1px solid #339933;"
+            "color: white;"
+            "border-radius: 5px;"
+            "}"
+            "QPushButton:hover {"
+            "background-color: #4caf50;"  # Цвет кнопки при наведении курсора
+            "}"
+            "QPushButton:pressed {"
+            "background-color: #388e3c;"  # Цвет кнопки при нажатии
+            "}"
+        )
+        button_size = self.results_button.fontMetrics().boundingRect(self.results_button.text()).size() # Установка размера кнопки по размеру текста внутри
+        self.results_button.setFixedSize(button_size.width()+10, button_size.height()+5)
+        self.results_button.clicked.connect(self.openExcelFile)
+        h_layout.addWidget(self.results_button)
+
+        # Добавление горизонтального контейнера в вертикальный контейнер layout
+        layout.addLayout(h_layout)
+
 
         self.folder_button = QPushButton("Выбрать папку")
         self.folder_button.setFont(font)
@@ -59,16 +89,26 @@ class ImageComparisonApp(QWidget):
         self.reference_image_label = QLabel()
         layout.addWidget(self.reference_image_label)
 
-
+        """
         self.change_position_button = QPushButton("Изменить положение рамки вокруг эталонной картинки")
         self.change_position_button.clicked.connect(self.changePosition)
         self.change_position_button.setEnabled(False)  # Кнопка недоступна до выбора эталона
         layout.addWidget(self.change_position_button)
-
+        """
 
         self.compare_button = QPushButton("Сравнить все изображения с эталоном")
+        self.compare_button.setStyleSheet("background-color: #f0f0f0;"
+                                          "border: 1px solid #ccc;"
+                                          "color: black;"
+                                          "border-radius: 10px;"
+                                          "padding: 5px 10px;"
+                                          "QPushButton:hover {"
+                                          "background-color: #e0e0e0;"  # Цвет кнопки при наведении курсора
+                                          "}"
+                                          )
         self.compare_button.setFont(font)
         self.compare_button.clicked.connect(self.compareImages)
+        self.compare_button.setEnabled(False)  # Начально блокируем кнопку
         layout.addWidget(self.compare_button)
 
         self.images_layout = QHBoxLayout()
@@ -89,7 +129,9 @@ class ImageComparisonApp(QWidget):
         self.setGeometry(500, 200, 700, 400)
         self.setWindowTitle('Image Comparison App')
 
-
+    def openExcelFile(self):
+        # Открыть Excel-файл
+        QDesktopServices.openUrl(QUrl.fromLocalFile(self.excel_file))
     def selectFolder(self):
         """
         Обработчик нажатия кнопки для выбора папки
@@ -99,6 +141,7 @@ class ImageComparisonApp(QWidget):
             self.folder_path = folder
             self.folder_label.setText(f"Выбрана папка: {os.path.basename(folder)}")
             self.images_loaded = False
+            self.enableCompareButtonIfReady()
 
     def selectLabel(self):
         """
@@ -109,6 +152,7 @@ class ImageComparisonApp(QWidget):
         label_path, _ = QFileDialog.getOpenFileName(self, "Выберите эталон", "", "Images (*.png *.jpg *.bmp *.jpeg);;All Files (*)", options=options)
         if label_path:
             self.label_path = label_path
+            self.enableCompareButtonIfReady()
             self.reference_label.setText(f"Выбран эталон: {os.path.basename(os.path.splitext(label_path)[0])}")
 
             # Выводим изображение эталона
@@ -119,6 +163,12 @@ class ImageComparisonApp(QWidget):
             self.reference_image_label.setPixmap(pixmap)
             self.images_loaded = False
 
+    def enableCompareButtonIfReady(self):
+        # Проверяем, выбраны ли папка и эталон, и разблокируем кнопку
+        if self.folder_path and self.label_path:
+            self.compare_button.setEnabled(True)
+        else:
+            self.compare_button.setEnabled(False)
     def convertCvImageToPixmap(self, cv_image, target_width=None, target_height=None):
         """
         Функция для преобразования cv-изображения в pixmap для вывода в окне приложения
