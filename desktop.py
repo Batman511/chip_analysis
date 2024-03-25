@@ -1,6 +1,6 @@
 import sys
 import os
-from PyQt5.QtGui import QPixmap, QImage, QFont
+from PyQt5.QtGui import QPixmap, QImage, QFont, qRgb
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGroupBox, QPushButton, QVBoxLayout, QFileDialog, QScrollArea, QHBoxLayout, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView
 from PyQt5.QtCore import Qt
 
@@ -19,7 +19,8 @@ class ImageComparisonApp(QWidget):
 
         self.folder_path = ""
         self.label_path = ""
-        # self.reference_image_path = ""
+        self.test_image_paths = []
+        self.images_loaded = False  # Флаг для отслеживания состояния загрузки изображений
 
         self.result_images = []
         # self.reference_image_label = QLabel()
@@ -117,6 +118,7 @@ class ImageComparisonApp(QWidget):
         if folder:
             self.folder_path = folder
             self.folder_label.setText(f"Выбрана папка: {os.path.basename(folder)}")
+            self.images_loaded = False
 
     def selectLabel(self):
         """
@@ -135,6 +137,7 @@ class ImageComparisonApp(QWidget):
 
             pixmap = self.convertCvImageToPixmap(etalon_cut_data, 300,300)
             self.reference_image_label.setPixmap(pixmap)
+            self.images_loaded = False
 
     def convertCvImageToPixmap(self, cv_image, target_width=None, target_height=None):
         """
@@ -156,6 +159,13 @@ class ImageComparisonApp(QWidget):
             # Создание объекта QImage
             q_image = QImage(image_rgb.data, width, height, bytes_per_line, QImage.Format_RGB888)
 
+            '''
+            # Применение colormap пока не работает!!!!
+            colormap_image = q_image.convertToFormat(QImage.Format_Grayscale8)
+            colormap_image.setColorTable([qRgb(i, i, i) for i in range(256)])
+            '''
+
+
             # Преобразование QImage в QPixmap
             pixmap = QPixmap.fromImage(q_image)
 
@@ -163,63 +173,62 @@ class ImageComparisonApp(QWidget):
         else:
             print("Ошибка: Изображение не задано.")
             return None
+
+    def clearImages(self):
+        """
+        Функция для очистки виджета отображения изображений
+        """
+        # Удаляем элементы из макета
+        for i in reversed(range(self.images_layout.count())):
+            widget = self.images_layout.itemAt(i).widget()
+            if widget is not None:
+                widget.setParent(None)
+
+        # Сбрасываем флаг загрузки изображений
+        self.images_loaded = False
     def compareImages(self):
         """
         Функция для сравнения изображений и вывода карты различий
         """
+        # Проверяем, были ли изображения уже загружены
+        if self.images_loaded:
+            return
+        else:
+            self.clearImages()
 
-        """
-        # if not self.image_folder or not self.label_path:
-        #     return
+        # Эталонное изображение
+        label_image = cv2.imdecode(np.fromfile(self.label_path, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+        label_data = get_window(label_image)['img_cutted']
 
-        # Ваш код по сравнению изображений, сохраняющий результаты в self.result_images
-        # find_differences1(etalon_cut_data['img_cutted'], superimpose_data['img_cutted'])['img_diff']
-        # etalon_img = cv2.imdecode(np.fromfile(label_path, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
-        # etalon_cut_data = get_window(etalon_img)['img_cutted']
+        # Фильтруем список файлов, исключая эталонное изображение
+        files = os.listdir(self.folder_path)
+        self.test_image_paths = [os.path.join(self.folder_path, file) for file in files if file != os.path.basename(self.label_path)]
 
-        # pixmap = self.convertCvImageToPixmap(etalon_cut_data)
-        # self.reference_image_label.setPixmap(pixmap)
-        self.result_images = cv2.imdecode(np.fromfile(self.label_path, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
-
-        # Отображаем результаты в виджете прокрутки
-        self.displayComparisonResults()
-
-        # Показываем поле вывода
-        self.result_group_box.show()
-        """
+        test_image = cv2.imdecode(np.fromfile(self.test_image_paths[0], dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+        test_data = get_window(test_image)['img_cutted']
 
 
-        # Отображение первого изображения
-        cv_image_1 = cv2.imdecode(np.fromfile(self.label_path, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
-        cv_image = get_window(cv_image_1)['img_cutted']
+        superimpose_data = update_image_by_etalon(label_data,test_data)
+        differences1_superimpose_data = find_differences1(label_data, superimpose_data['img_cutted'])
+
 
         # Преобразуем изображение cv в QPixmap
-        pixmap = self.convertCvImageToPixmap(cv_image, 200, 200)
+        ABS_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff'], 200, 200)
+        Erode_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff_erode'], 200, 200)
+        Dilate_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff_dilate'], 200, 200)
+
 
         # Создаем три виджета QLabel для отображения изображений
-        for _ in range(3):
+        for image_cv in [ABS_with_SIFT,Erode_with_SIFT,Dilate_with_SIFT]:
             label = QLabel()
-            label.setPixmap(pixmap)
+            label.setPixmap(image_cv)
             self.images_layout.addWidget(label)
 
-        # Показываем место для изображений
+
         self.images_layout.parentWidget().show()
 
-
-        # pixmap1 = QPixmap(self.label_path)
-        # label1 = QLabel()
-        # label1.setPixmap(pixmap1)
-        # self.original_images_layout.addWidget(label1)
-        #
-        # # Отображение второго изображения
-        # # Предположим, что путь ко второму изображению хранится в переменной self.reference_image_path
-        # pixmap2 = QPixmap(self.reference_image_path)
-        # label2 = QLabel()
-        # label2.setPixmap(pixmap2)
-        # self.original_images_layout.addWidget(label2)
-        #
-        # # Показываем поле вывода
-        # self.original_images_layout.show()
+        # Устанавливаем флаг, указывающий на то, что изображения загружены
+        self.images_loaded = True
 
     def changePosition(self):
         # Изменение положения рамки вокруг эталонной картинки
