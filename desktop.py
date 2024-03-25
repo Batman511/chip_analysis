@@ -33,6 +33,7 @@ class ImageComparisonApp(QWidget):
         font = QFont()
         font.setPointSize(12)
 
+
         self.folder_label = QLabel("Выберите папку с изображениями:")
         self.folder_label.setFont(font)
         layout.addWidget(self.folder_label)
@@ -41,6 +42,7 @@ class ImageComparisonApp(QWidget):
         self.folder_button.setFont(font)
         self.folder_button.clicked.connect(self.selectFolder)
         layout.addWidget(self.folder_button)
+
 
         self.reference_label = QLabel("Выберите эталон:")
         self.reference_label.setFont(font)
@@ -55,15 +57,22 @@ class ImageComparisonApp(QWidget):
         self.reference_image_label = QLabel()
         layout.addWidget(self.reference_image_label)
 
+
         self.change_position_button = QPushButton("Изменить положение рамки вокруг эталонной картинки")
         self.change_position_button.clicked.connect(self.changePosition)
         self.change_position_button.setEnabled(False)  # Кнопка недоступна до выбора эталона
         layout.addWidget(self.change_position_button)
 
+
         self.compare_button = QPushButton("Сравнить все изображения с эталоном")
         self.compare_button.setFont(font)
         self.compare_button.clicked.connect(self.compareImages)
         layout.addWidget(self.compare_button)
+
+        self.images_layout = QHBoxLayout()
+        layout.addLayout(self.images_layout)
+
+
 
         # Виджет прокрутки
         self.scroll_area = QScrollArea()
@@ -181,20 +190,36 @@ class ImageComparisonApp(QWidget):
 
 
         # Отображение первого изображения
-        pixmap1 = QPixmap(self.label_path)
-        label1 = QLabel()
-        label1.setPixmap(pixmap1)
-        self.original_images_layout.addWidget(label1)
+        cv_image_1 = cv2.imdecode(np.fromfile(self.label_path, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+        cv_image = get_window(cv_image_1)['img_cutted']
 
-        # Отображение второго изображения
-        # Предположим, что путь ко второму изображению хранится в переменной self.reference_image_path
-        pixmap2 = QPixmap(self.reference_image_path)
-        label2 = QLabel()
-        label2.setPixmap(pixmap2)
-        self.original_images_layout.addWidget(label2)
+        # Преобразуем изображение cv в QPixmap
+        pixmap = self.convertCvImageToPixmap(cv_image, 200, 200)
 
-        # Показываем поле вывода
-        self.original_images_layout.show()
+        # Создаем три виджета QLabel для отображения изображений
+        for _ in range(3):
+            label = QLabel()
+            label.setPixmap(pixmap)
+            self.images_layout.addWidget(label)
+
+        # Показываем место для изображений
+        self.images_layout.parentWidget().show()
+
+
+        # pixmap1 = QPixmap(self.label_path)
+        # label1 = QLabel()
+        # label1.setPixmap(pixmap1)
+        # self.original_images_layout.addWidget(label1)
+        #
+        # # Отображение второго изображения
+        # # Предположим, что путь ко второму изображению хранится в переменной self.reference_image_path
+        # pixmap2 = QPixmap(self.reference_image_path)
+        # label2 = QLabel()
+        # label2.setPixmap(pixmap2)
+        # self.original_images_layout.addWidget(label2)
+        #
+        # # Показываем поле вывода
+        # self.original_images_layout.show()
 
     def changePosition(self):
         # Изменение положения рамки вокруг эталонной картинки
