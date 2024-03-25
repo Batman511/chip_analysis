@@ -1,7 +1,9 @@
 import sys
 import os
+from openpyxl import Workbook, load_workbook
 from PyQt5.QtGui import QPixmap, QImage, QFont, qRgb
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGroupBox, QPushButton, QVBoxLayout, QFileDialog, QScrollArea, QHBoxLayout, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QGroupBox, QPushButton, QVBoxLayout, QFileDialog, \
+    QScrollArea, QHBoxLayout, QGraphicsPixmapItem, QGraphicsScene, QGraphicsView, QCheckBox
 from PyQt5.QtCore import Qt
 
 from process import *
@@ -21,8 +23,8 @@ class ImageComparisonApp(QWidget):
         self.label_path = ""
         self.test_image_paths = []
         self.images_loaded = False  # Флаг для отслеживания состояния загрузки изображений
-
-        self.result_images = []
+        self.excel_file = r"C:\Users\User\Documents\материалы ВИШ\АСЭ\chip_analysis\results.xlsx"
+        # self.result_images = []
         # self.reference_image_label = QLabel()
 
         self.initUI()
@@ -174,6 +176,41 @@ class ImageComparisonApp(QWidget):
             print("Ошибка: Изображение не задано.")
             return None
 
+    def update_excel(file_path, folder_name, test_image_name, image_difference):
+        """
+        Функция для создания или обновления Excel-файла с указанными данными
+        """
+        try:
+            if os.path.exists(file_path):
+                wb = load_workbook(file_path)
+                ws = wb.active
+            else:
+                wb = Workbook()
+                ws = wb.active
+                ws.append(["Партия", "Снимок", "Статус"])  # заголовки
+
+            # Проверяем, есть ли уже такие данные в файле
+            found = False
+            for row in ws.iter_rows(min_row=2, max_col=3, max_row=ws.max_row):
+                if row[0].value == folder_name and row[1].value == test_image_name:
+                    row[2].value = image_difference
+                    found = True
+                    break
+
+            if not found:
+                ws.append([folder_name, test_image_name, image_difference])
+
+            wb.save(file_path)
+        except PermissionError:
+            print("Ошибка: Файл Excel открыт. Пожалуйста, закройте файл и повторите попытку.")
+
+    def updateExcel(self, state, folder, image):
+        """
+        Функция для обновления данных в файле Excel при изменении состояния чекбокса.
+        """
+        State = True if state == Qt.Checked else False
+        print(self.excel_file, folder, image, State)
+        # self.update_excel(self.excel_file, folder, image, State)
     def clearImages(self):
         """
         Функция для очистки виджета отображения изображений
@@ -213,15 +250,15 @@ class ImageComparisonApp(QWidget):
 
 
         # Преобразуем изображения cv в QPixmap
-        test = self.convertCvImageToPixmap(label_data, 200, 200)
+        test = self.convertCvImageToPixmap(test_data, 200, 200)
         ABS_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff'], 200, 200)
         # Erode_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff_erode'], 200, 200)
-        Dilate_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff_dilate'], 200, 200)
+        # Dilate_with_SIFT = self.convertCvImageToPixmap(differences1_superimpose_data['img_diff_dilate'], 200, 200)
 
-        titles = ["Test Image:", "ABS with SIFT:", "Dilate with SIFT:"]
+        titles = ["Test Image:", "ABS with SIFT:"]
 
         # Создаем три виджета QLabel для отображения изображений
-        for image_cv, title in zip([test, ABS_with_SIFT,Dilate_with_SIFT], titles):
+        for image_cv, title in zip([test, ABS_with_SIFT], titles):
             # Создаем QLabel для заголовка
             title_label = QLabel(title)
             self.images_layout.addWidget(title_label)
@@ -231,9 +268,18 @@ class ImageComparisonApp(QWidget):
             label.setPixmap(image_cv)
             self.images_layout.addWidget(label)
 
+        # Создаем чекбокс
+        checkbox = QCheckBox("Изображения различаются?")
+        checkbox.stateChanged.connect(lambda state, folder=os.path.basename(self.folder_path), test_image=os.path.basename(self.test_image_paths[0]): self.updateExcel(state,folder,test_image))
+        self.images_layout.addWidget(checkbox)
+
 
         self.images_layout.parentWidget().show()
         self.images_loaded = True  # изображения загружены
+
+        # Вызываем функцию update_excel() для сохранения данных в файле Excel
+        test_image_name = os.path.basename(self.test_image_paths[0])
+        self.updateExcel(Qt.Unchecked, os.path.basename(self.folder_path), test_image_name)
 
     def changePosition(self):
         # Изменение положения рамки вокруг эталонной картинки
