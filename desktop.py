@@ -24,13 +24,12 @@ class ImageComparisonApp(QWidget):
         self.test_image_paths = []
         self.images_loaded = False  # Флаг для отслеживания состояния загрузки изображений
         self.excel_file = r"C:\Users\User\Documents\материалы ВИШ\АСЭ\chip_analysis\results.xlsx"
-        # self.result_images = []
-        # self.reference_image_label = QLabel()
 
         self.initUI()
 
     def initUI(self):
         layout = QVBoxLayout()
+        print("FOLD | LABEL | TEST_IMAGE | STATUS")
 
         # Увеличим размер шрифта
         font = QFont()
@@ -83,34 +82,13 @@ class ImageComparisonApp(QWidget):
         self.image_layout = QVBoxLayout(self.image_container)
         self.scroll_area.setWidgetResizable(True)
         self.scroll_area.setWidget(self.image_container)
-
-
         # layout.addWidget(self.scroll_area)
 
 
-        # self.result_label = QLabel("Результат:")
-        # self.result_label.setFont(font)
-        # layout.addWidget(self.result_label)
-        #
-        # self.result_view = QGraphicsView()
-        # self.result_scene = QGraphicsScene()
-        # self.result_view.setScene(self.result_scene)
-        # layout.addWidget(self.result_view)
-
         self.setLayout(layout)
-
-
         self.setGeometry(500, 200, 700, 400)
         self.setWindowTitle('Image Comparison App')
 
-        # Поле вывода
-        # self.result_group_box = QGroupBox("Результат:")
-        # result_layout = QVBoxLayout()
-        # self.result_group_box.setLayout(result_layout)
-        # self.result_label = QLabel("Поле вывода будет здесь")
-        # result_layout.addWidget(self.result_label)
-        # self.result_group_box.hide()
-        # layout.addWidget(self.result_group_box)
 
     def selectFolder(self):
         """
@@ -176,10 +154,14 @@ class ImageComparisonApp(QWidget):
             print("Ошибка: Изображение не задано.")
             return None
 
-    def update_excel(file_path, folder_name, test_image_name, image_difference):
+    def update_excel(self, file_path, label_image_name, test_image_name, stat):
         """
         Функция для создания или обновления Excel-файла с указанными данными
         """
+        folder_name = os.path.basename(self.folder_path)
+        label_image_name = os.path.basename(self.label_path)
+        print(folder_name, label_image_name, test_image_name, stat)
+
         try:
             if os.path.exists(file_path):
                 wb = load_workbook(file_path)
@@ -187,30 +169,25 @@ class ImageComparisonApp(QWidget):
             else:
                 wb = Workbook()
                 ws = wb.active
-                ws.append(["Партия", "Снимок", "Статус"])  # заголовки
+                ws.append(["Партия","Эталон", "Снимок", "Статус"])  # заголовки
 
             # Проверяем, есть ли уже такие данные в файле
             found = False
-            for row in ws.iter_rows(min_row=2, max_col=3, max_row=ws.max_row):
-                if row[0].value == folder_name and row[1].value == test_image_name:
-                    row[2].value = image_difference
+            for row in ws.iter_rows(min_row=2, max_col=4, max_row=ws.max_row):
+                if row[0].value == folder_name and row[2].value == test_image_name:
+                    row[3].value = stat
                     found = True
                     break
 
             if not found:
-                ws.append([folder_name, test_image_name, image_difference])
+                ws.append([folder_name, label_image_name, test_image_name, stat])
 
             wb.save(file_path)
+            return True
         except PermissionError:
             print("Ошибка: Файл Excel открыт. Пожалуйста, закройте файл и повторите попытку.")
+            return False
 
-    def updateExcel(self, state, folder, image):
-        """
-        Функция для обновления данных в файле Excel при изменении состояния чекбокса.
-        """
-        State = True if state == Qt.Checked else False
-        print(self.excel_file, folder, image, State)
-        # self.update_excel(self.excel_file, folder, image, State)
     def clearImages(self):
         """
         Функция для очистки виджета отображения изображений
@@ -268,18 +245,19 @@ class ImageComparisonApp(QWidget):
             label.setPixmap(image_cv)
             self.images_layout.addWidget(label)
 
+        self.update_excel(os.path.normpath(self.excel_file), os.path.basename(self.label_path),os.path.basename(self.test_image_paths[0]), "Различий нет")
         # Создаем чекбокс
         checkbox = QCheckBox("Изображения различаются?")
-        checkbox.stateChanged.connect(lambda state, folder=os.path.basename(self.folder_path), test_image=os.path.basename(self.test_image_paths[0]): self.updateExcel(state,folder,test_image))
+        checkbox.stateChanged.connect(lambda state, label_image=os.path.basename(self.label_path), test_image=os.path.basename(self.test_image_paths[0]): self.update_excel(os.path.normpath(self.excel_file), label_image, test_image, "Найдены различия!") if state == Qt.Checked else self.update_excel(os.path.normpath(self.excel_file), label_image, test_image, "Различий нет"))
+
+
         self.images_layout.addWidget(checkbox)
 
 
         self.images_layout.parentWidget().show()
         self.images_loaded = True  # изображения загружены
 
-        # Вызываем функцию update_excel() для сохранения данных в файле Excel
-        test_image_name = os.path.basename(self.test_image_paths[0])
-        self.updateExcel(Qt.Unchecked, os.path.basename(self.folder_path), test_image_name)
+
 
     def changePosition(self):
         # Изменение положения рамки вокруг эталонной картинки
